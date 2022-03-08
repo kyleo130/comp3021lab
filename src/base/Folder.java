@@ -133,8 +133,7 @@ public class Folder implements Comparable<Folder>{
 					}
 				}
 				
-				if (matchOr == false)
-				{
+				if (matchOr == false) {
 					matchAnd = false;
 					break;
 				}
