@@ -1,7 +1,9 @@
 package base;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import base.Folder;
 import base.Note;
@@ -16,17 +18,22 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 /**
@@ -60,6 +67,10 @@ public class NoteBookWindow extends Application {
 	 */
 	NoteBook noteBook = null;
 	/**
+	 * absolute path of Notebook object
+	 */
+	String noteBookPath = "";
+	/**
 	 * current folder selected by the user
 	 */
 	String currentFolder = "";
@@ -67,6 +78,15 @@ public class NoteBookWindow extends Application {
 	 * current search string
 	 */
 	String currentSearch = "";
+	/**
+	 * current note selected by the user
+	 */
+	String currentNote = "";
+	
+	/**
+	 * the stage of this display
+	 */
+	Stage stage;
 
 	public static void main(String[] args) {
 		launch(NoteBookWindow.class, args);
@@ -75,6 +95,7 @@ public class NoteBookWindow extends Application {
 	@Override
 	public void start(Stage stage) {
 		loadNoteBook();
+		this.stage = stage;
 		// Use a border pane as the root for scene
 		BorderPane border = new BorderPane();
 		// add top, left and center
@@ -99,12 +120,59 @@ public class NoteBookWindow extends Application {
 		hbox.setPadding(new Insets(15, 12, 15, 12));
 		hbox.setSpacing(10); // Gap between nodes
 
-		Button buttonLoad = new Button("Load");
+		Button buttonLoad = new Button("Load from File");
 		buttonLoad.setPrefSize(100, 20);
-		buttonLoad.setDisable(true);
-		Button buttonSave = new Button("Save");
+		// buttonLoad.setDisable(true);
+		buttonLoad.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				FileChooser fileChooser = new FileChooser();
+				fileChooser.setTitle("Please Choose An File Which Contains a Notebook Object!");
+				
+				FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("Serialized Object File (*.ser)", "*.ser");
+				fileChooser.getExtensionFilters().add(extFilter);
+				
+				File file = fileChooser.showOpenDialog(stage);
+				
+				if (file != null) {
+					loadNoteBook(file);
+					
+					foldersComboBox.getItems().clear();
+					for (Folder f : noteBook.getFolders()) {
+						foldersComboBox.getItems().add(f.getName());
+					}
+				}
+			}
+		});
+		
+		Button buttonSave = new Button("Save to File");
 		buttonSave.setPrefSize(100, 20);
-		buttonSave.setDisable(true);
+		// buttonSave.setDisable(true);
+		buttonSave.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				FileChooser fileChooser = new FileChooser();
+				fileChooser.setTitle("Please Choose An File Which Contains a Notebook Object!");
+				
+				FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("Serialized Object File (*.ser)", "*.ser");
+				fileChooser.getExtensionFilters().add(extFilter);
+				
+				File file = fileChooser.showOpenDialog(stage);
+				
+				noteBook.save(file.getAbsolutePath());
+				
+				Alert alert = new Alert(AlertType.INFORMATION);
+				alert.setTitle("Successfully saved");
+				alert.setContentText("You file has been saved to file " + file.getName());
+				alert.showAndWait().ifPresent(rs -> {
+				    if (rs == ButtonType.OK) {
+				        System.out.println("Pressed OK.");
+				    }
+				});
+			}
+		});
+		
+		
 		Label labelSearch = new Label("Search :");
 		TextField textSearch = new TextField();
 		
@@ -140,7 +208,10 @@ public class NoteBookWindow extends Application {
 	 * @return
 	 */
 	private VBox addVBox() {
-
+		
+		HBox hbox = new HBox();
+		hbox.setSpacing(10); // Gap between nodes
+		
 		VBox vbox = new VBox();
 		vbox.setPadding(new Insets(10)); // Set all sides to 10
 		vbox.setSpacing(8); // Gap between nodes
@@ -190,10 +261,94 @@ public class NoteBookWindow extends Application {
 				textAreaNote.setText(content);
 			}
 		});
+		
+		Button buttonAddFolder = new Button("Add a Folder");
+		buttonAddFolder.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				TextInputDialog dialog = new TextInputDialog("Add a Folder");
+			    dialog.setTitle("Input");
+			    dialog.setHeaderText("Add a new folder for your notebook:");
+			    dialog.setContentText("Please enter the name you want to create:");
+			    // Traditional way to get the response value.
+			    Optional<String> result = dialog.showAndWait();
+			    if (result.isPresent()){
+			        // TODO
+			    	if (result.get().equals("")) {
+			    		Alert alert = new Alert(AlertType.WARNING);
+						alert.setContentText("Please input a valid folder name");
+						alert.showAndWait().ifPresent(rs -> {
+						    if (rs == ButtonType.OK) {
+						        System.out.println("Pressed OK.");
+						    }
+						});
+						
+						return;
+			    	}
+			    	
+			    	for (String folderName : foldersComboBox.getItems()) {
+			    		if (folderName.equals(result.get())) {
+			    			Alert alert = new Alert(AlertType.WARNING);
+							alert.setContentText("You already have a folder named with " + folderName);
+							alert.showAndWait().ifPresent(rs -> {
+								   if (rs == ButtonType.OK) {
+								       System.out.println("Pressed OK.");
+								   }
+							});
+							
+							return;
+			    		}
+			    	}
+			    	
+			    	noteBook.addFolder(result.get());
+			    	foldersComboBox.getItems().add(result.get());
+			    }
+			}
+		});
+		
+		Button buttonAddNote = new Button("Add a Note");
+		buttonAddNote.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				if (currentFolder.equals("") || currentFolder.equals("-----")) {
+					Alert alert = new Alert(AlertType.WARNING);
+					alert.setContentText("Please choose a folder first!");
+					alert.showAndWait().ifPresent(rs -> {
+						   if (rs == ButtonType.OK) {
+						       System.out.println("Pressed OK.");
+						   }
+					});
+				} else {
+					TextInputDialog dialog = new TextInputDialog("Add a Note");
+				    dialog.setTitle("Input");
+				    dialog.setHeaderText("Add a new note to current folder");
+				    dialog.setContentText("Please enter the name of your note:");
+				    // Traditional way to get the response value.
+				    Optional<String> result = dialog.showAndWait();
+				    
+				    noteBook.createTextNote(currentFolder, result.get());
+				    updateListView();
+				    
+				    Alert alert = new Alert(AlertType.INFORMATION);
+					alert.setTitle("Successful!");
+					alert.setContentText("Insert note " + result.get() + " to folder " + currentFolder + " successfully!");
+					alert.showAndWait().ifPresent(rs -> {
+					    if (rs == ButtonType.OK) {
+					        System.out.println("Pressed OK.");
+					    }
+					});
+				}
+			}
+		});
+		
+		hbox.getChildren().add(foldersComboBox);
+		hbox.getChildren().add(buttonAddFolder);
+		
 		vbox.getChildren().add(new Label("Choose folder: "));
-		vbox.getChildren().add(foldersComboBox);
+		vbox.getChildren().add(hbox);
 		vbox.getChildren().add(new Label("Choose note title"));
 		vbox.getChildren().add(titleslistView);
+		vbox.getChildren().add(buttonAddNote);
 
 		return vbox;
 	}
@@ -245,6 +400,11 @@ public class NoteBookWindow extends Application {
 		grid.add(textAreaNote, 0, 0);
 
 		return grid;
+	}
+	
+	private void loadNoteBook(File file) {
+		noteBookPath = file.getAbsolutePath();
+		noteBook = new NoteBook(noteBookPath);
 	}
 
 	private void loadNoteBook() {
