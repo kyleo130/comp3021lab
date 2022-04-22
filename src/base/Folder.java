@@ -149,4 +149,15 @@ public class Folder implements Comparable<Folder>, Serializable {
 		
 		return noteList;
 	}
+	
+	public boolean removeNotes(String title) {
+		for (Note note : notes) {
+			if (note.getTitle().equals(title)) {
+				notes.remove(note);
+				return true;
+			}
+		}
+		
+		return false;
+	}
 }

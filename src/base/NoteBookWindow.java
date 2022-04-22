@@ -29,6 +29,8 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputDialog;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
@@ -133,6 +135,11 @@ public class NoteBookWindow extends Application {
 				fileChooser.getExtensionFilters().add(extFilter);
 				
 				File file = fileChooser.showOpenDialog(stage);
+				
+				textAreaNote.setText("");
+				titleslistView.getItems().clear();
+				currentFolder = "";
+				currentNote = "";
 				
 				if (file != null) {
 					loadNoteBook(file);
@@ -242,6 +249,7 @@ public class NoteBookWindow extends Application {
 				if (t1 == null)
 					return;
 				String title = t1.toString();
+				currentNote = title;
 				// This is the selected title
 				// TODO load the content of the selected note in
 				// textAreNote
@@ -391,13 +399,92 @@ public class NoteBookWindow extends Application {
 		grid.setHgap(10);
 		grid.setVgap(10);
 		grid.setPadding(new Insets(10, 10, 10, 10));
-		textAreaNote.setEditable(false);
+		
+		HBox hbox = new HBox();
+		hbox.setSpacing(10); // Gap between nodes
+		
+		ImageView saveView = new ImageView(new Image(new File("save.png").toURI().toString()));
+		saveView.setFitHeight(18);
+		saveView.setFitWidth(18);
+		saveView.setPreserveRatio(true);
+		
+		Button buttonSaveNote = new Button("Save Note");
+		buttonSaveNote.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				if (currentFolder.equals("") || currentFolder.equals("-----") || currentNote.equals("")) {
+					Alert alert = new Alert(AlertType.WARNING);
+					alert.setContentText("Please select a folder and a note");
+					alert.showAndWait().ifPresent(rs -> {
+						   if (rs == ButtonType.OK) {
+						       System.out.println("Pressed OK.");
+						   }
+					});
+				} else {
+					for (Folder f : noteBook.getFolders()) {
+						if (f.getName().equals(currentFolder)) {
+							for (Note note : f.getNotes()) {
+								if (note instanceof TextNote) {
+									if (((TextNote) note).getTitle().equals(currentNote)) {
+										((TextNote) note).content = textAreaNote.getText();
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		});
+		
+		
+		ImageView deleteView = new ImageView(new Image(new File("delete.png").toURI().toString()));
+		deleteView.setFitHeight(18);
+		deleteView.setFitWidth(18);
+		deleteView.setPreserveRatio(true);
+		
+		Button buttonDeleteNote = new Button("Delete Note");
+		buttonDeleteNote.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				if (currentFolder.equals("") || currentFolder.equals("-----") || currentNote.equals("")) {
+					Alert alert = new Alert(AlertType.WARNING);
+					alert.setContentText("Please select a folder and a note");
+					alert.showAndWait().ifPresent(rs -> {
+						   if (rs == ButtonType.OK) {
+						       System.out.println("Pressed OK.");
+						   }
+					});
+				} else {
+					for (Folder f : noteBook.getFolders()) {
+						if (f.getName().equals(currentFolder)) {
+							f.removeNotes(currentNote);
+						}
+					}
+					
+					updateListView();
+					
+					Alert alert = new Alert(AlertType.INFORMATION);
+					alert.setTitle("Succeed!");
+					alert.setContentText("Your note has been successfully removed");
+					alert.showAndWait().ifPresent(rs -> {
+					    if (rs == ButtonType.OK) {
+					        System.out.println("Pressed OK.");
+					    }
+					});
+				}
+			}
+		});
+		
+		hbox.getChildren().addAll(saveView, buttonSaveNote, deleteView, buttonDeleteNote);
+		
+		textAreaNote.setEditable(true);
 		textAreaNote.setMaxSize(450, 400);
 		textAreaNote.setWrapText(true);
 		textAreaNote.setPrefWidth(450);
 		textAreaNote.setPrefHeight(400);
 		// 0 0 is the position in the grid
-		grid.add(textAreaNote, 0, 0);
+		grid.add(hbox, 0, 0);
+		grid.add(textAreaNote, 0, 1);
 
 		return grid;
 	}
